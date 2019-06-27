@@ -447,7 +447,7 @@ static PHP_FUNCTION(event_base_loop)
 	ZVAL_TO_BASE(zbase, base);//printf("event_base_loop: base=%p\n", base);
 	//Z_ADDREF_P(base->rsrc); /* make sure the base cannot be destroyed during the loop */
 	ret = event_base_loop(base->base, flags);
-	zend_list_delete(base->rsrc);
+	//zend_list_delete(base->rsrc);
 
 	RETURN_LONG(ret);
 }
@@ -843,7 +843,7 @@ static PHP_FUNCTION(event_timer_set)
 		RETURN_FALSE;
 	}
 	//efree(func_name);
-	
+
 	callback = emalloc(sizeof(php_event_callback_t));
 	callback->func = emalloc(sizeof(zval));
 	callback->arg = emalloc(sizeof(zval));
@@ -1263,6 +1263,7 @@ static PHP_FUNCTION(event_buffer_fd_set)
 #ifdef LIBEVENT_SOCKETS_SUPPORT
 	php_socket *php_sock;
 #endif
+	zend_long r;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rz", &zbevent, &zfd) != SUCCESS) {
 		return;
@@ -1299,7 +1300,8 @@ static PHP_FUNCTION(event_buffer_fd_set)
 		RETURN_FALSE;
 	}
 
-	bufferevent_setfd(bevent->bevent, fd);
+	r = bufferevent_setfd(bevent->bevent, fd);
+	RETURN_LONG(r);
 }
 /* }}} */
 
