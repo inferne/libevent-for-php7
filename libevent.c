@@ -122,7 +122,7 @@ typedef struct _php_bufferevent_t { /* {{{ */
 #endif
 } php_bufferevent_t;
 /* }}} */
-// zend_resource *res, const char *resource_type_name, int resource_type
+
 #define ZVAL_TO_BASE(zval, base) \
 	(base = zend_fetch_resource(Z_RES_P(zval), "event base", le_event_base))
 
@@ -131,7 +131,7 @@ typedef struct _php_bufferevent_t { /* {{{ */
 
 #define ZVAL_TO_BEVENT(zval, bevent) \
 	(bevent = zend_fetch_resource(Z_RES_P(zval), "buffer event", le_bufferevent))
-//#define ADDREF_P(res) (*res).gc.refcount++
+
 /* {{{ internal funcs */
 
 static inline void _php_event_callback_free(php_event_callback_t *callback) /* {{{ */
@@ -843,17 +843,12 @@ static PHP_FUNCTION(event_timer_set)
 		RETURN_FALSE;
 	}
 	//efree(func_name);
-
-	zval_add_ref(zcallback);
-	if (zarg) {
-		zval_add_ref(zarg);
-	} else {
-		ALLOC_INIT_ZVAL(zarg);
-	}
-
+	
 	callback = emalloc(sizeof(php_event_callback_t));
-	callback->func = zcallback;
-	callback->arg = zarg;
+	callback->func = emalloc(sizeof(zval));
+	callback->arg = emalloc(sizeof(zval));
+	ZVAL_COPY(callback->func, zcallback);
+	ZVAL_COPY(callback->arg, zarg);
 
 	old_callback = event->callback;
 	event->callback = callback;
@@ -865,7 +860,7 @@ static PHP_FUNCTION(event_timer_set)
 	event_set(event->event, -1, 0, _php_event_callback, event);
 
 	if (old_callback) {
-		//_php_event_callback_free(old_callback);
+		_php_event_callback_free(old_callback);
 	}
 	RETURN_TRUE;
 }
