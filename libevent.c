@@ -175,7 +175,7 @@ static void _php_event_dtor(zend_resource *rsrc TSRMLS_DC) /* {{{ */
 		--event->base->events;
 	}
 	if (event->stream->handle >= 0) {
-		zend_list_delete(event->stream);
+		//zend_list_delete(event->stream);
 	}
 	event_del(event->event);
 	
@@ -193,7 +193,7 @@ static void _php_bufferevent_dtor(zend_resource *rsrc TSRMLS_DC) /* {{{ */
 {
 	php_bufferevent_t *bevent = (php_bufferevent_t*)rsrc->ptr;
 	int base_id = -1;
-	//printf("_php_bufferevent_dtor: bevent=%p, bevent->bevent=%p, bevent->rsrc=%p, bevent->base->rsrc=%p\n", bevent, bevent->bevent, bevent->rsrc, bevent->base->rsrc);
+	// printf("_php_bufferevent_dtor: bevent=%p, bevent->bevent=%p, bevent->rsrc=%p, bevent->base->rsrc=%p\n", bevent, bevent->bevent, bevent->rsrc, bevent->base->rsrc);
 	if (bevent->base) {
 		base_id = bevent->base->rsrc->handle;
 		--bevent->base->events;
@@ -257,13 +257,13 @@ static void _php_event_callback(int fd, short events, void *arg) /* {{{ */
 	//Z_ADDREF_P(callback->arg);
 	//printf("_php_event_callback: event->stream->refcount=%d\n", (*event->stream).gc.refcount);
 	if (call_user_function(EG(function_table), NULL, callback->func, &retval, 3, args TSRMLS_CC) == SUCCESS) {
-		zval_dtor(&retval); // stack ?printf("_php_event_callback: event->stream->refcount=%d, &retval=%p\n", (*event->stream).gc.refcount, &retval);
+		zval_ptr_dtor(&retval); // stack ?printf("_php_event_callback: event->stream->refcount=%d, &retval=%p\n", (*event->stream).gc.refcount, &retval);
 	}
-	//printf("_php_event_callback: callback->func=%s, event->stream=%p, &args[0]=%p &args[1]=%p &args[2]=%p\n", Z_STR_P(callback->func), event->stream, &args[0], &args[1], &args[2]);
-	//zval_ptr_dtor(&args[0]);
-	//zval_ptr_dtor(&args[1]);
-	//zval_ptr_dtor(&args[2]); 
-	
+	// printf("zend_array=%d\n", sizeof(zend_array));
+	// printf("_php_event_callback: callback->func=%s, event->stream=%p, &args[0]=%p &args[1]=%p &args[2]=%p\n", Z_STR_P(callback->func), event->stream, &args[0], &args[1], &args[2]);
+	// zval_ptr_dtor(&args[0]);
+	// zval_ptr_dtor(&args[1]);
+	// zval_ptr_dtor(&args[2]);
 }
 /* }}} */
 
@@ -286,9 +286,8 @@ static void _php_bufferevent_readcb(struct bufferevent *be, void *arg) /* {{{ */
 	//Z_ADDREF(args[1]);
 	
 	if (call_user_function(EG(function_table), NULL, bevent->readcb, &retval, 2, args TSRMLS_CC) == SUCCESS) {
-		zval_dtor(&retval);
+		zval_ptr_dtor(&retval);
 	}
-
 	//zval_ptr_dtor(&args[0]);
 	//zval_ptr_dtor(&args[1]); 
 
@@ -314,9 +313,8 @@ static void _php_bufferevent_writecb(struct bufferevent *be, void *arg) /* {{{ *
 	//Z_ADDREF(args[1]);
 	
 	if (call_user_function(EG(function_table), NULL, bevent->writecb, &retval, 2, args TSRMLS_CC) == SUCCESS) {
-		zval_dtor(&retval);
+		zval_ptr_dtor(&retval);
 	}
-
 	//zval_ptr_dtor(&args[0]);
 	//zval_ptr_dtor(&args[1]); 
 	
@@ -345,9 +343,8 @@ static void _php_bufferevent_errorcb(struct bufferevent *be, short what, void *a
 	//Z_ADDREF(args[2]);
 	
 	if (call_user_function(EG(function_table), NULL, bevent->errorcb, &retval, 3, args TSRMLS_CC) == SUCCESS) {
-		zval_dtor(&retval);
+		zval_ptr_dtor(&retval);
 	}
-
 	//zval_ptr_dtor(&args[0]);
 	//zval_ptr_dtor(&args[1]);
 	//zval_ptr_dtor(&args[2]); 
@@ -666,7 +663,7 @@ static PHP_FUNCTION(event_set)
 	php_event_t *event;
 	long events;
 	php_event_callback_t *callback, *old_callback;
-	//zend_string *func_name;
+	// zend_string *func_name;
 	php_stream *stream;
 	php_socket_t file_desc;
 #ifdef LIBEVENT_SOCKETS_SUPPORT
@@ -725,10 +722,10 @@ static PHP_FUNCTION(event_set)
 
 	if (!zend_is_callable(zcallback, 0, NULL TSRMLS_CC)) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "'%s' is not a valid callback", Z_STRVAL_P(zcallback));
-		//efree(func_name); // if efree func_name->val?
+		// efree(func_name); // if efree func_name->val?
 		RETURN_FALSE;
 	}
-	//efree(func_name); // because foo is interned string so refcount is 1
+	// efree(func_name); // because foo is interned string so refcount is 1
 	//printf("event_set: zcallback=%p\n", zcallback);
 	//zval_add_ref_unref(zcallback);printf("event_set: zcallback=%p, Z_TYPE_FLAGS(zcallback)=%d, Z_TYPE_FLAGS(zarg)=%d\n", zcallback, Z_TYPE_FLAGS_P(zcallback), Z_TYPE_FLAGS_P(zarg));
 	if (zarg) {
@@ -839,10 +836,10 @@ static PHP_FUNCTION(event_timer_set)
 
 	if (!zend_is_callable(zcallback, 0, &func_name TSRMLS_CC)) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "'%s' is not a valid callback", func_name->val);
-		//efree(func_name);
+		efree(func_name);
 		RETURN_FALSE;
 	}
-	//efree(func_name);
+	efree(func_name);
 
 	callback = emalloc(sizeof(php_event_callback_t));
 	callback->func = emalloc(sizeof(zval));
@@ -949,10 +946,10 @@ static PHP_FUNCTION(event_buffer_new)
 	if (Z_TYPE_P(zreadcb) != IS_NULL) {
 		if (!zend_is_callable(zreadcb, 0, &func_name TSRMLS_CC)) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "'%s' is not a valid read callback", func_name->val);
-			//efree(func_name);
+			efree(func_name);
 			RETURN_FALSE;
 		}
-		//efree(func_name);
+		efree(func_name);
 	} else {
 		zreadcb = NULL;
 	}
@@ -960,20 +957,20 @@ static PHP_FUNCTION(event_buffer_new)
 	if (Z_TYPE_P(zwritecb) != IS_NULL) {
 		if (!zend_is_callable(zwritecb, 0, &func_name TSRMLS_CC)) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "'%s' is not a valid write callback", func_name->val);
-			//efree(func_name);
+			efree(func_name);
 			RETURN_FALSE;
 		}
-		//efree(func_name);
+		efree(func_name);
 	} else {
 		zwritecb = NULL;
 	}
 
 	if (!zend_is_callable(zerrorcb, 0, &func_name TSRMLS_CC)) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "'%s' is not a valid error callback", func_name->val);
-		//efree(func_name);
+		efree(func_name);
 		RETURN_FALSE;
 	}
-	//efree(func_name);
+	efree(func_name);
 
 	bevent = emalloc(sizeof(php_bufferevent_t));
 	bevent->bevent = bufferevent_new(fd, _php_bufferevent_readcb, _php_bufferevent_writecb, _php_bufferevent_errorcb, (void *)bevent);
@@ -1012,6 +1009,7 @@ static PHP_FUNCTION(event_buffer_new)
 #endif
 	zval_add_ref(zr);
 	bevent->rsrc = Z_RES_P(zr);
+	// printf("%d\n", sizeof(zend_resource));
 	//printf("event_buffer_new: bevent->rsrc=%p, bevent->rsrc->handle=%d, bevent->base=%p\n", bevent->rsrc, bevent->rsrc->handle, bevent->base);
 	RETURN_RES(bevent->rsrc);
 }
@@ -1322,10 +1320,10 @@ static PHP_FUNCTION(event_buffer_set_callback)
 	if (Z_TYPE_P(zreadcb) != IS_NULL) {
 		if (!zend_is_callable(zreadcb, 0, &func_name TSRMLS_CC)) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "'%s' is not a valid read callback", func_name->val);
-			//efree(func_name);
+			efree(func_name);
 			RETURN_FALSE;
 		}
-		//efree(func_name);
+		efree(func_name);
 	} else {
 		zreadcb = NULL;
 	}
@@ -1333,10 +1331,10 @@ static PHP_FUNCTION(event_buffer_set_callback)
 	if (Z_TYPE_P(zwritecb) != IS_NULL) {
 		if (!zend_is_callable(zwritecb, 0, &func_name TSRMLS_CC)) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "'%s' is not a valid write callback", func_name->val);
-			//efree(func_name);
+			efree(func_name);
 			RETURN_FALSE;
 		}
-		//efree(func_name);
+		efree(func_name);
 	} else {
 		zwritecb = NULL;
 	}
@@ -1344,10 +1342,10 @@ static PHP_FUNCTION(event_buffer_set_callback)
 	if (Z_TYPE_P(zerrorcb) != IS_NULL) {
 		if (!zend_is_callable(zerrorcb, 0, &func_name TSRMLS_CC)) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "'%s' is not a valid error callback", func_name->val);
-			//efree(func_name);
+			efree(func_name);
 			RETURN_FALSE;
 		}
-		//efree(func_name);
+		efree(func_name);
 	} else {
 		zerrorcb = NULL;
 	}
